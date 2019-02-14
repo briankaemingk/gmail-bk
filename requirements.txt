@@ -16,6 +16,7 @@ google-api-python-client==1.7.7
 google-auth==1.6.2
 google-auth-httplib2==0.0.3
 google-auth-oauthlib==0.2.0
+gunicorn==19.9.0
 httplib2==0.12.0
 idna==2.6
 ipaddress==1.0.17
@@ -27,6 +28,7 @@ keyrings.alt==3.0
 Mako==1.0.7
 MarkupSafe==1.1.0
 oauthlib==2.1.0
+pkg-resources==0.0.0
 pyasn1==0.4.5
 pyasn1-modules==0.2.2
 pycairo==1.18.0
