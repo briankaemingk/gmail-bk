@@ -29,14 +29,16 @@ API_SERVICE_NAME = 'gmail'
 API_VERSION = 'v1'
 
 REQ = {
-    'labelIds': [os.getenv('GETAROUND_LABEL')],
+    'labelIds': [os.getenv('GETAROUND_LABEL'), os.getenv('ORDERS_LABEL')],
     'labelFilterAction': 'include',
     'topicName': os.getenv('TOPIC')
 }
 
-# Local testing: ssh -R webhooks-bk-tunnel:80:localhost:5000 serveo.net
+# Local testing:
+# ssh -R webhooks-bk-tunnel:80:localhost:5000 serveo.net
 # https://webhooks-bk-tunnel.serveo.net/webhook-callback
-
+# https://webhooks-bk-tunnel.serveo.net/webhook-callback?token=1jjab34
+# gcloud alpha pubsub subscriptions seek projects/gmail-webhooks-b-1538950910515/subscriptions/sub --time=2019-02-17T13:20:00
 
 def create_json_file(raw_json, filename):
     json_secret = json.loads(raw_json)
@@ -66,33 +68,8 @@ def index():
     return print_index_table()
 
 
-@app.route('/test')
-def test_api_request():
-
-    if 'credentials' not in flask.session:
-        return flask.redirect('authorize')
-
-    # Load credentials from the session.
-    credentials = google.oauth2.credentials.Credentials(
-        **flask.session['credentials'])
-
-    gmail = googleapiclient.discovery.build(
-        API_SERVICE_NAME, API_VERSION, credentials=credentials)
-
-
-    # Call the Gmail API, watch the label
-    watch_response = gmail.users().watch(userId='me', body=REQ).execute()
-
-    start_history = watch_response['historyId']
-
-    flask.session['credentials'] = credentials_to_dict(credentials)
-
-    return "Complete"
-
-
 @app.route('/authorize')
 def authorize():
-    initialize_cron_job()
     # Create flow instance to manage the OAuth 2.0 Authorization Grant Flow steps.
     flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
       CLIENT_SECRETS_FILE, scopes=SCOPES)
@@ -144,31 +121,27 @@ def oauth2callback():
         create_user(user_email, credentials, start_history)
 
     else:
-        update_creds(db.session.query(User.email).filter_by(email=user_email), credentials)
+        user = User.query.filter_by(email=user_email).first()
+        user.token = credentials.token
+        user.refresh_token = credentials.refresh_token,
+        user.token_uri = credentials.token_uri,
+        user.client_id = credentials.client_id,
+        user.client_secret = credentials.client_secret,
+        user.scopes = credentials.scopes[0]
+        db.session.commit()
 
-    flask.session['credentials'] = credentials_to_dict(credentials)
     initialize_cron_job()
-
-    #return flask.redirect(flask.url_for('test_api_request'))
-    return "Complete"
+    return 'OK', 200
 
 
-def credentials_to_dict(credentials):
-    return {'token': credentials.token,
-          'refresh_token': credentials.refresh_token,
-          'token_uri': credentials.token_uri,
-          'client_id': credentials.client_id,
-          'client_secret': credentials.client_secret,
-          'scopes': credentials.scopes}
-
-
-def creds_to_dict(user):
-    return {'token': user.token,
-        'refresh_token': user.refresh_token,
-        'token_uri': user.token_uri,
-        'client_id': user.client_id,
-        'client_secret': user.client_secret,
-        'scopes': [user.scopes]}
+def create_user_creds(user):
+    return google.oauth2.credentials.Credentials(
+        str(user.token),
+        refresh_token=str(user.refresh_token),
+        token_uri=str(user.token_uri),
+        client_id=str(user.client_id),
+        client_secret=str(user.client_secret),
+        scopes=str(user.scopes))
 
 def create_user(user_email, credentials, start_history):
     u = User(
@@ -183,26 +156,9 @@ def create_user(user_email, credentials, start_history):
     db.session.add(u)
     db.session.commit()
 
-def update_creds(user, credentials):
-    user.token = str(credentials.token),
-    user.refresh_token = str(credentials.refresh_token),
-    user.token_uri = str(credentials.token_uri),
-    user.client_id = str(credentials.client_id),
-    user.client_secret = str(credentials.client_secret),
-    user.scopes = str(credentials.scopes)
-    db.session.commit()
 
 def print_index_table():
-    return ('<table>' +
-          '<tr><td><a href="/test">Test an API request</a></td>' +
-          '<td>Submit an API request and see a formatted JSON response. ' +
-          '    Go through the authorization flow if there are no stored ' +
-          '    credentials for the user.</td></tr>' +
-          '<tr><td><a href="/authorize">Test the auth flow directly</a></td>' +
-          '<td>Go directly to the authorization flow. If there are stored ' +
-          '    credentials, you still might not be prompted to reauthorize ' +
-          '    the application.</td></tr>' +
-          '</td></tr></table>')
+    return ('<a href="/authorize">Authorize app</a>')
 
 
 @app.route("/google593c268ab6c32072.html")
@@ -210,6 +166,10 @@ def verify():
      return "google-site-verification: google593c268ab6c32072.html"
 
 
+# Local testing:
+# ssh -R webhooks-bk-tunnel:80:localhost:5000 serveo.net
+# https://webhooks-bk-tunnel.serveo.net/webhook-callback
+# https://webhooks-bk-tunnel.serveo.net/webhook-callback?token=1jjab34
 @app.route("/webhook-callback", methods=['POST'])
 def webhook_callback():
 
@@ -225,96 +185,113 @@ def webhook_callback():
     if not user_exists:
         return flask.redirect('authorize')
 
-    u = User.query.filter_by(email=user_email).first()
+    user = User.query.filter_by(email=user_email).first()
 
-    # Load credentials from the session.
-    credentials = google.oauth2.credentials.Credentials(
-        **creds_to_dict(u))
+    # Load credentials
+    credentials = create_user_creds(user)
 
     gmail = googleapiclient.discovery.build(
         API_SERVICE_NAME, API_VERSION, credentials=credentials)
 
     api = initialize_todoist()
-    #
-    # if (request.args.get('token', '') != os.getenv('PUBSUB_VERIFICATION_TOKEN')):
-    #     return 'Invalid request', 400
+
+    if (request.args.get('token', '') != os.getenv('PUBSUB_VERIFICATION_TOKEN')):
+        return 'Invalid request', 400
 
     try:
         history = (gmail.users().history().list(userId='me',
-                                                  startHistoryId=u.history,
-                                                  historyTypes='messageAdded')
-                   .execute())
+                                                  startHistoryId=int(user.history),
+                                                  historyTypes='messageAdded').execute())
         changes = history['history'] if 'history' in history else []
         while 'nextPageToken' in history:
             page_token = history['nextPageToken']
             history = (gmail.users().history().list(userId='me',
-                                                      startHistoryId=u.history,
+                                                      startHistoryId=user.history,
                                                       pageToken=page_token, historyTypes='messageAdded').execute())
             changes.extend(history['history'])
     except errors.HttpError as error:
         print
         'An error occurred: %s' % error
 
-    predefinedLabels = [os.getenv('GETAROUND_LABEL'), 'INBOX']
+    getAroundLabels = [os.getenv('GETAROUND_LABEL'), 'INBOX']
+    orderLabels = [os.getenv('ORDERS_LABEL')]
 
     for change in changes:
         if 'messagesAdded' in change:
             print('***In messages added: ' + str(change))
             labels = change["messagesAdded"][0]["message"]["labelIds"]
-            intersectionOfTwoArrays = list(set(predefinedLabels) & set(labels))
-            if set(predefinedLabels) == set(intersectionOfTwoArrays):
-                message = gmail.users().messages().get(userId='me', id=change["messagesAdded"][0]["message"]["id"]).execute()
-                subject = (header for header in message['payload']['headers'] if header["name"] == "Subject").__next__()['value']
-                #msg_str = str(base64.urlsafe_b64decode(message['payload']['parts'][0]['body']['data'].encode('utf-8')), 'utf-8')
-                #md_msg_str = md(msg_str)
-                msg_id = change["messagesAdded"][0]["message"]["id"]
-                msg_url = "https://mail.google.com/mail/u/0/#label/getaround/" + change["messagesAdded"][0]["message"]["id"]
-                msg_str = message['snippet']
+            intersectionOfTwoArrays = list(set(getAroundLabels) & set(labels))
 
-                rental_date_obj = parse(subject, fuzzy=True)
-                today = get_now_user_timezone(api)
-                tomorrow = today + timedelta(days=1)
+            #New Getaround reservation
+            if set(getAroundLabels) == set(intersectionOfTwoArrays):
+                new_getaround_rental(gmail, change, api)
 
-                labels = [os.getenv('TODOIST_T2D_L_ID'), os.getenv('TODOIST_HOME_L_ID')]
-                project_id = os.getenv('TODOIST_GETAROUND_P_ID')
-                date_string = today + timedelta(minutes=15)
-                rental_date_str = rental_date_obj.strftime('%I:%M')
-
-                # Rental is today
-                if today.date() == rental_date_obj.date():
-                    content = 'Getaround rental today at ' + rental_date_str + ' - Clean-out car'
-
-                # Rental is tomorrow before 9am
-                if tomorrow.date() == rental_date_obj.date() and rental_date_obj.hour  <= 9:
-                    content = 'Getaround rental tomorrow at ' + rental_date_str + ' - Clean-out car'
-
-                else:
-                    content = 'Getaround rental at ' + rental_date_str + ' - Clean-out car'
-                    date_string = str(rental_date_obj.month) + '-' + str(rental_date_obj.day)
-
-                item = add_task(api, project_id, content, date_string, labels)
-                api.notes.add(item['id'], "[Link to message](" + msg_url + ") -  " + msg_str)
-
-                # Get text between Return and Duration then remove the PST (which is an unrecognized tz)
-                return_date_obj = parse((msg_str.split("Return:")[1]).split("Duration:")[0].rsplit(' ',2)[0], fuzzy=True)
-                return_date_str = return_date_obj.strftime('%I:%M')
-
-                content = 'Getaround return at ' + return_date_str + ' - Clean-out car'
-                date_string = return_date_obj + timedelta(minutes=30)
-                labels = [os.getenv('TODOIST_HOME_L_ID')]
-                add_task(api, project_id, content, date_string, labels)
-                print('******************Task created: ', content)
-                api.commit()
-
+            if set(orderLabels) == set(intersectionOfTwoArrays):
+                new_order(gmail, change, api)
 
     #Reset start history
+    user.history = data['historyId']
 
-
-
-    u.history = data['historyId']
+    user = User.query.filter_by(email=user_email).first()
+    user.token = credentials.token
+    user.refresh_token = credentials.refresh_token,
+    user.token_uri = credentials.token_uri,
+    user.client_id = credentials.client_id,
+    user.client_secret = credentials.client_secret,
+    user.scopes = credentials.scopes[0]
+    db.session.commit()
 
     # Returning any 2xx status indicates successful receipt of the message.
     return 'OK', 200
+
+
+def new_order(gmail, change, api):
+    print("New order")
+
+def new_getaround_rental(gmail, change, api):
+    message = gmail.users().messages().get(userId='me', id=change["messagesAdded"][0]["message"]["id"]).execute()
+    subject = (header for header in message['payload']['headers'] if header["name"] == "Subject").__next__()['value']
+    # msg_str = str(base64.urlsafe_b64decode(message['payload']['parts'][0]['body']['data'].encode('utf-8')), 'utf-8')
+    # md_msg_str = md(msg_str)
+    msg_id = change["messagesAdded"][0]["message"]["id"]
+    msg_url = "https://mail.google.com/mail/u/0/#label/getaround/" + change["messagesAdded"][0]["message"]["id"]
+    msg_str = message['snippet']
+
+    rental_date_obj = parse(subject, fuzzy=True)
+    today = get_now_user_timezone(api)
+    tomorrow = today + timedelta(days=1)
+
+    labels = [os.getenv('TODOIST_T2D_L_ID'), os.getenv('TODOIST_HOME_L_ID')]
+    project_id = os.getenv('TODOIST_GETAROUND_P_ID')
+    date_string = today + timedelta(minutes=15)
+    rental_date_str = rental_date_obj.strftime('%I:%M')
+
+    # Rental is today
+    if today.date() == rental_date_obj.date():
+        content = 'Getaround rental today at ' + rental_date_str + ' - Clean-out car'
+
+    # Rental is tomorrow before 9am
+    if tomorrow.date() == rental_date_obj.date() and rental_date_obj.hour <= 9:
+        content = 'Getaround rental tomorrow at ' + rental_date_str + ' - Clean-out car'
+
+    else:
+        content = 'Getaround rental at ' + rental_date_str + ' - Clean-out car'
+        date_string = str(rental_date_obj.month) + '-' + str(rental_date_obj.day)
+
+    item = add_task(api, project_id, content, date_string, labels)
+    api.notes.add(item['id'], "[Link to message](" + msg_url + ") -  " + msg_str)
+
+    # Get text between Return and Duration then remove the PST (which is an unrecognized tz)
+    return_date_obj = parse((msg_str.split("Return:")[1]).split("Duration:")[0].rsplit(' ', 2)[0], fuzzy=True)
+    return_date_str = return_date_obj.strftime('%I:%M')
+
+    content = 'Getaround return at ' + return_date_str + ' - Clean-out car'
+    date_string = return_date_obj + timedelta(minutes=30)
+    labels = [os.getenv('TODOIST_HOME_L_ID')]
+    add_task(api, project_id, content, date_string, labels)
+    print('******************Task created: ', content)
+    api.commit()
+
 
 def add_task(api, project_id, content, date_str, labels):
     item = api.items.add(content,
@@ -365,20 +342,26 @@ def watch():
 
     for user in users:
         # Load credentials from the session.
-        credentials = google.oauth2.credentials.Credentials(
-            **creds_to_dict(user))
+        credentials = create_user_creds(user)
 
         gmail = googleapiclient.discovery.build(
             API_SERVICE_NAME, API_VERSION, credentials=credentials)
 
-
         watch_response = str(gmail.users().watch(userId='me', body=REQ).execute())
         print("Watch renewed at: " + watch_response)
+
+        user.token = credentials.token
+        user.refresh_token = credentials.refresh_token,
+        user.token_uri = credentials.token_uri,
+        user.client_id = credentials.client_id,
+        user.client_secret = credentials.client_secret,
+        user.scopes = credentials.scopes[0]
+        db.session.commit()
 
 # Create scheduled job to run daily
 def initialize_cron_job():
     scheduler = BackgroundScheduler(timezone=utc)
-    scheduler.add_job(watch, 'cron', hour=8, minute=58)
+    scheduler.add_job(watch, 'cron', hour=0, minute=0)
     scheduler.start()
     atexit.register(lambda: scheduler.shutdown())
 
