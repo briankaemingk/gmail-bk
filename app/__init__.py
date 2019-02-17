@@ -378,7 +378,7 @@ def watch():
 # Create scheduled job to run daily
 def initialize_cron_job():
     scheduler = BackgroundScheduler(timezone=utc)
-    scheduler.add_job(watch, 'cron', hour=8, minute=23)
+    scheduler.add_job(watch, 'cron', hour=8, minute=58)
     scheduler.start()
     atexit.register(lambda: scheduler.shutdown())
 
