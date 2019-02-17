@@ -93,7 +93,6 @@ def test_api_request():
 @app.route('/authorize')
 def authorize():
     initialize_cron_job()
-    print('Initialized')
     # Create flow instance to manage the OAuth 2.0 Authorization Grant Flow steps.
     flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
       CLIENT_SECRETS_FILE, scopes=SCOPES)
@@ -365,16 +364,21 @@ def watch():
     users = User.query.all()
 
     for user in users:
-        credentials = creds_to_dict(user)
+        # Load credentials from the session.
+        credentials = google.oauth2.credentials.Credentials(
+            **creds_to_dict(user))
+
         gmail = googleapiclient.discovery.build(
             API_SERVICE_NAME, API_VERSION, credentials=credentials)
+
+
         watch_response = str(gmail.users().watch(userId='me', body=REQ).execute())
         print("Watch renewed at: " + watch_response)
 
 # Create scheduled job to run daily
 def initialize_cron_job():
     scheduler = BackgroundScheduler(timezone=utc)
-    scheduler.add_job(watch, 'cron', hour=14, minute=25)
+    scheduler.add_job(watch, 'cron', hour=8, minute=21)
     scheduler.start()
     atexit.register(lambda: scheduler.shutdown())
 
