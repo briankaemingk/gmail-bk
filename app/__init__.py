@@ -262,7 +262,7 @@ def new_order(gmail, id, api):
 
     task = api.items.add(content=content, project_id=os.getenv('TODOIST_PERSONAL_P_ID'), labels=[os.getenv('TODOIST_WWF_L_ID')])
     api.commit()
-    api.notes.add(int(task['id']), '[Link to message]' + '(' + link + ')\\n' + snippet)
+    api.notes.add(int(task['id']), '[Link to message]' + '(' + link + '): ' + snippet)
     api.commit()
 
 def truncate_string(string, length):
