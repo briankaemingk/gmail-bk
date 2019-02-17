@@ -29,8 +29,6 @@ API_SERVICE_NAME = 'gmail'
 API_VERSION = 'v1'
 
 REQ = {
-    'labelIds': [os.getenv('GETAROUND_LABEL'), os.getenv('ORDERS_LABEL')],
-    'labelFilterAction': 'include',
     'topicName': os.getenv('TOPIC')
 }
 
@@ -38,6 +36,7 @@ REQ = {
 # ssh -R webhooks-bk-tunnel:80:localhost:5000 serveo.net
 # https://webhooks-bk-tunnel.serveo.net/webhook-callback
 # https://webhooks-bk-tunnel.serveo.net/webhook-callback?token=1jjab34
+# https://gmail-bk.herokuapp.com/webhook-callback?token=1jjab34
 # gcloud alpha pubsub subscriptions seek projects/gmail-webhooks-b-1538950910515/subscriptions/sub --time=2019-02-17T13:20:00
 
 def create_json_file(raw_json, filename):
@@ -190,6 +189,7 @@ def webhook_callback():
     # Load credentials
     credentials = create_user_creds(user)
 
+
     gmail = googleapiclient.discovery.build(
         API_SERVICE_NAME, API_VERSION, credentials=credentials)
 
@@ -200,8 +200,7 @@ def webhook_callback():
 
     try:
         history = (gmail.users().history().list(userId='me',
-                                                  startHistoryId=int(user.history),
-                                                  historyTypes='messageAdded').execute())
+                                                  startHistoryId=int(user.history)).execute())
         changes = history['history'] if 'history' in history else []
         while 'nextPageToken' in history:
             page_token = history['nextPageToken']
@@ -214,11 +213,17 @@ def webhook_callback():
         'An error occurred: %s' % error
 
     getAroundLabels = [os.getenv('GETAROUND_LABEL'), 'INBOX']
-    orderLabels = [os.getenv('ORDERS_LABEL')]
+    orderLabels = [os.getenv('ORDERS_LABEL'), 'INBOX']
 
     for change in changes:
+
+        if 'labelsAdded' in change:
+            for message in change['labelsAdded']:
+                for label in message['labelIds']:
+                    if label == os.getenv('ORDERS_LABEL'): new_order(gmail, message['message']['id'], api)
+
         if 'messagesAdded' in change:
-            print('***In messages added: ' + str(change))
+ #           print('***In messages added: ' + str(change))
             labels = change["messagesAdded"][0]["message"]["labelIds"]
             intersectionOfTwoArrays = list(set(getAroundLabels) & set(labels))
 
@@ -226,8 +231,7 @@ def webhook_callback():
             if set(getAroundLabels) == set(intersectionOfTwoArrays):
                 new_getaround_rental(gmail, change, api)
 
-            if set(orderLabels) == set(intersectionOfTwoArrays):
-                new_order(gmail, change, api)
+
 
     #Reset start history
     user.history = data['historyId']
@@ -245,8 +249,24 @@ def webhook_callback():
     return 'OK', 200
 
 
-def new_order(gmail, change, api):
-    print("New order")
+def new_order(gmail, id, api):
+    message = gmail.users().messages().get(userId='me', id=id, format = 'metadata').execute()
+    sender = message['payload']['headers'][4]['value']
+    trunc_sender = truncate_string(sender, 18)
+    subject = message['payload']['headers'][3]['value']
+    trunc_subject = truncate_string(subject, 20)
+    m_id = message['payload']['headers'][2]['value']
+    link = 'https://mail.google.com/mail/u/0/#search/rfc822msgid%3A' + m_id
+    snippet = message['snippet']
+    content = trunc_sender + ' - ship ' + trunc_subject
+
+    task = api.items.add(content=content, project_id=os.getenv('TODOIST_PERSONAL_P_ID'), labels=[os.getenv('TODOIST_WWF_L_ID')])
+    api.commit()
+    api.notes.add(int(task['id']), '[Link to message]' + '(' + link + ')/n' + snippet)
+    api.commit()
+
+def truncate_string(string, length):
+    return (string[:length] + '..') if len(string) > length else string
 
 def new_getaround_rental(gmail, change, api):
     message = gmail.users().messages().get(userId='me', id=change["messagesAdded"][0]["message"]["id"]).execute()
