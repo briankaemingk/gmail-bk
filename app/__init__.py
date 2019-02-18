@@ -223,13 +223,14 @@ def webhook_callback():
                     if label == os.getenv('ORDERS_LABEL'): new_order(gmail, message['message']['id'], api)
 
         if 'messagesAdded' in change:
- #           print('***In messages added: ' + str(change))
-            labels = change["messagesAdded"][0]["message"]["labelIds"]
-            intersectionOfTwoArrays = list(set(getAroundLabels) & set(labels))
+            if 'labelIds' in change["messagesAdded"][0]["message"] :
+     #           print('***In messages added: ' + str(change))
+                labels = change["messagesAdded"][0]["message"]["labelIds"]
+                intersectionOfTwoArrays = list(set(getAroundLabels) & set(labels))
 
-            #New Getaround reservation
-            if set(getAroundLabels) == set(intersectionOfTwoArrays):
-                new_getaround_rental(gmail, change, api)
+                #New Getaround reservation
+                if set(getAroundLabels) == set(intersectionOfTwoArrays):
+                    new_getaround_rental(gmail, change, api)
 
 
 
