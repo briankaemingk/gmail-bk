@@ -66,6 +66,9 @@ from app.models import User
 def index():
     return print_index_table()
 
+@app.route('/test')
+def test_api_request():
+    return 'OK', 200
 
 @app.route('/authorize')
 def authorize():
@@ -81,6 +84,8 @@ def authorize():
       access_type='offline',
       # Enable incremental authorization. Recommended as a best practice.
       include_granted_scopes='true')
+
+    print("Auth url", authorization_url)
 
     # Store the state so the callback can verify the auth server response.
     flask.session['state'] = state
@@ -103,6 +108,8 @@ def oauth2callback():
     authorization_response = flask.request.url
     flow.fetch_token(authorization_response=authorization_response)
     credentials = flow.credentials
+
+    print("Refresh: ", credentials.refresh_token)
 
     gmail = googleapiclient.discovery.build(
         API_SERVICE_NAME, API_VERSION, credentials=credentials)
@@ -130,7 +137,7 @@ def oauth2callback():
         db.session.commit()
 
     initialize_cron_job()
-    return 'OK', 200
+    return flask.redirect(flask.url_for('test_api_request'))
 
 
 def create_user_creds(user):
@@ -239,11 +246,6 @@ def webhook_callback():
 
     user = User.query.filter_by(email=user_email).first()
     user.token = credentials.token
-    user.refresh_token = credentials.refresh_token,
-    user.token_uri = credentials.token_uri,
-    user.client_id = credentials.client_id,
-    user.client_secret = credentials.client_secret,
-    user.scopes = credentials.scopes[0]
     db.session.commit()
 
     # Returning any 2xx status indicates successful receipt of the message.
@@ -372,11 +374,6 @@ def watch():
         print("Watch renewed at: " + watch_response)
 
         user.token = credentials.token
-        user.refresh_token = credentials.refresh_token,
-        user.token_uri = credentials.token_uri,
-        user.client_id = credentials.client_id,
-        user.client_secret = credentials.client_secret,
-        user.scopes = credentials.scopes[0]
         db.session.commit()
 
 # Create scheduled job to run daily
