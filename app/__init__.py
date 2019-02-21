@@ -33,6 +33,7 @@ REQ = {
 }
 
 # Local testing:
+# https://myaccount.google.com/u/0/permissions
 # ssh -R webhooks-bk-tunnel:80:localhost:5000 serveo.net
 # https://webhooks-bk-tunnel.serveo.net/webhook-callback
 # https://webhooks-bk-tunnel.serveo.net/webhook-callback?token=1jjab34
@@ -85,7 +86,6 @@ def authorize():
       # Enable incremental authorization. Recommended as a best practice.
       include_granted_scopes='true')
 
-    print("Auth url", authorization_url)
 
     # Store the state so the callback can verify the auth server response.
     flask.session['state'] = state
@@ -109,7 +109,6 @@ def oauth2callback():
     flow.fetch_token(authorization_response=authorization_response)
     credentials = flow.credentials
 
-    print("Refresh: ", credentials.refresh_token)
 
     gmail = googleapiclient.discovery.build(
         API_SERVICE_NAME, API_VERSION, credentials=credentials)
@@ -137,17 +136,18 @@ def oauth2callback():
         db.session.commit()
 
     initialize_cron_job()
+
     return flask.redirect(flask.url_for('test_api_request'))
 
 
 def create_user_creds(user):
     return google.oauth2.credentials.Credentials(
-        str(user.token),
+        token=user.token,
         refresh_token=str(user.refresh_token),
         token_uri=str(user.token_uri),
         client_id=str(user.client_id),
         client_secret=str(user.client_secret),
-        scopes=str(user.scopes))
+        scopes=[str(user.scopes)])
 
 def create_user(user_email, credentials, start_history):
     u = User(
@@ -200,6 +200,7 @@ def webhook_callback():
     gmail = googleapiclient.discovery.build(
         API_SERVICE_NAME, API_VERSION, credentials=credentials)
 
+
     api = initialize_todoist()
 
     if (request.args.get('token', '') != os.getenv('PUBSUB_VERIFICATION_TOKEN')):
@@ -220,10 +221,8 @@ def webhook_callback():
         'An error occurred: %s' % error
 
     getAroundLabels = [os.getenv('GETAROUND_LABEL'), 'INBOX']
-    orderLabels = [os.getenv('ORDERS_LABEL'), 'INBOX']
 
     for change in changes:
-
         if 'labelsAdded' in change:
             for message in change['labelsAdded']:
                 for label in message['labelIds']:
@@ -246,6 +245,9 @@ def webhook_callback():
 
     user = User.query.filter_by(email=user_email).first()
     user.token = credentials.token
+    if credentials.refresh_token is not None:
+        print("New refresh token: ", credentials.refresh_token)
+        user.refresh_token = credentials.refresh_token
     db.session.commit()
 
     # Returning any 2xx status indicates successful receipt of the message.
