@@ -256,9 +256,13 @@ def webhook_callback():
 
 def new_order(gmail, id, api):
     message = gmail.users().messages().get(userId='me', id=id, format = 'metadata').execute()
-    sender = message['payload']['headers'][4]['value']
+
+    for header in message['payload']['headers']:
+        if header['name'] == 'Subject':
+            subject = header['value']
+        elif header['name'] == 'From':
+            sender = header['value']
     trunc_sender = truncate_string(sender, 18)
-    subject = message['payload']['headers'][3]['value']
     trunc_subject = truncate_string(subject, 20)
     m_id = message['payload']['headers'][2]['value']
     link = 'https://mail.google.com/mail/u/0/#search/rfc822msgid%3A' + m_id
