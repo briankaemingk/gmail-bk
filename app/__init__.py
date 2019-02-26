@@ -387,7 +387,7 @@ def watch():
 def initialize_cron_job():
     print("Initializing cron job")
     scheduler = BackgroundScheduler(timezone=utc)
-    scheduler.add_job(watch, 'cron', hour=8, minute=39)
+    scheduler.add_job(watch, 'cron', hour=0, minute=0)
     scheduler.start()
     atexit.register(lambda: scheduler.shutdown())
 
