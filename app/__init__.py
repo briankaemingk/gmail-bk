@@ -365,6 +365,7 @@ def get_user_timezone(api):
 
 def watch():
     # Call the Gmail API, watch the label
+    print("******** in watch renewal *********")
 
     users = User.query.all()
 
@@ -386,7 +387,7 @@ def watch():
 def initialize_cron_job():
     print("Initializing cron job")
     scheduler = BackgroundScheduler(timezone=utc)
-    scheduler.add_job(watch, 'cron', hour=9, minute=32)
+    scheduler.add_job(watch, 'cron', hour=8, minute=37)
     scheduler.start()
     atexit.register(lambda: scheduler.shutdown())
 
