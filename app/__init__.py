@@ -379,13 +379,14 @@ def watch():
         print("Watch renewed at: " + watch_response)
 
         user.token = credentials.token
+        user.refresh_token = credentials.refresh_token
         db.session.commit()
 
 # Create scheduled job to run daily
 def initialize_cron_job():
     print("Initializing cron job")
     scheduler = BackgroundScheduler(timezone=utc)
-    scheduler.add_job(watch, 'cron', hour=0, minute=0)
+    scheduler.add_job(watch, 'cron', hour=9, minute=32)
     scheduler.start()
     atexit.register(lambda: scheduler.shutdown())
 
