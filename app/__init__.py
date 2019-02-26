@@ -246,7 +246,6 @@ def webhook_callback():
     user = User.query.filter_by(email=user_email).first()
     user.token = credentials.token
     if credentials.refresh_token is not None:
-        print("New refresh token: ", credentials.refresh_token)
         user.refresh_token = credentials.refresh_token
     db.session.commit()
 
@@ -384,6 +383,7 @@ def watch():
 
 # Create scheduled job to run daily
 def initialize_cron_job():
+    print("Initializing cron job")
     scheduler = BackgroundScheduler(timezone=utc)
     scheduler.add_job(watch, 'cron', hour=0, minute=0)
     scheduler.start()
