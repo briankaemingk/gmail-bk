@@ -6,7 +6,6 @@ from config import Config
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 import requests
-from apscheduler.schedulers.background import BackgroundScheduler
 from pytz import utc
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
@@ -134,8 +133,6 @@ def oauth2callback():
         user.client_secret = credentials.client_secret,
         user.scopes = credentials.scopes[0]
         db.session.commit()
-
-    initialize_cron_job()
 
     return flask.redirect(flask.url_for('test_api_request'))
 
@@ -383,13 +380,6 @@ def watch():
         user.refresh_token = credentials.refresh_token
         db.session.commit()
 
-# Create scheduled job to run daily
-def initialize_cron_job():
-    print("Initializing cron job")
-    scheduler = BackgroundScheduler(timezone=utc)
-    scheduler.add_job(watch, 'cron', hour=0, minute=0)
-    scheduler.start()
-    atexit.register(lambda: scheduler.shutdown())
 
 if __name__ == '__main__':
     # When running locally, disable OAuthlib's HTTPs verification.
