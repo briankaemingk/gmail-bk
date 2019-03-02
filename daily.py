@@ -3,8 +3,11 @@ from app.models import User
 
 sched = BlockingScheduler()
 
-@sched.scheduled_job('cron', hour=13, minute=3)
+@sched.scheduled_job('cron', hour=13, minute=6)
 def scheduled_job():
-    print('This job is run every day at midnight')
+    users = User.query.all
+
+    for user in users:
+        print(user.email)
 
 sched.start()
