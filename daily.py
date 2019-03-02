@@ -3,6 +3,7 @@ from app.models import User
 from app import create_user_creds
 import googleapiclient.discovery
 from app import db
+import os
 
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 API_SERVICE_NAME = 'gmail'
@@ -13,7 +14,7 @@ REQ = {
 
 sched = BlockingScheduler()
 
-@sched.scheduled_job('cron', hour=13, minute=21)
+@sched.scheduled_job('cron', hour=13, minute=22)
 def scheduled_job():
     users = User.query.all()
 
