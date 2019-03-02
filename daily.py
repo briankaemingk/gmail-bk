@@ -14,30 +14,24 @@ REQ = {
 
 sched = BlockingScheduler()
 
-@sched.scheduled_job('cron', hour=0, minute=0)
+@sched.scheduled_job('cron', hour=13, minute=27)
 def scheduled_job():
     users = User.query.all()
 
     for user in users:
 
-        # Call the Gmail API, watch the label
-        print("******** in watch renewal *********")
+        # Load credentials from the session.
+        credentials = create_user_creds(user)
 
-        users = User.query.all()
+        gmail = googleapiclient.discovery.build(
+            API_SERVICE_NAME, API_VERSION, credentials=credentials)
 
-        for user in users:
-            # Load credentials from the session.
-            credentials = create_user_creds(user)
+        watch_response = str(gmail.users().watch(userId='me', body=REQ).execute())
+        print("Watch renewed at: " + watch_response)
 
-            gmail = googleapiclient.discovery.build(
-                API_SERVICE_NAME, API_VERSION, credentials=credentials)
-
-            watch_response = str(gmail.users().watch(userId='me', body=REQ).execute())
-            print("Watch renewed at: " + watch_response)
-
-            user.token = credentials.token
-            user.refresh_token = credentials.refresh_token
-            db.session.commit()
+        user.token = credentials.token
+        user.refresh_token = credentials.refresh_token
+        db.session.commit()
 
 
 sched.start()
