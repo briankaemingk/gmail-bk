@@ -7,10 +7,13 @@ from app import db
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 API_SERVICE_NAME = 'gmail'
 API_VERSION = 'v1'
+REQ = {
+    'topicName': os.getenv('TOPIC')
+}
 
 sched = BlockingScheduler()
 
-@sched.scheduled_job('cron', hour=13, minute=19)
+@sched.scheduled_job('cron', hour=13, minute=21)
 def scheduled_job():
     users = User.query.all()
 
