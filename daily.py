@@ -14,7 +14,7 @@ REQ = {
 
 sched = BlockingScheduler()
 
-@sched.scheduled_job('cron', hour=13, minute=22)
+@sched.scheduled_job('cron', hour=13, minute=24)
 def scheduled_job():
     users = User.query.all()
 
