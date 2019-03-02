@@ -3,9 +3,9 @@ from app.models import User
 
 sched = BlockingScheduler()
 
-@sched.scheduled_job('cron', hour=13, minute=6)
+@sched.scheduled_job('cron', hour=13, minute=11)
 def scheduled_job():
-    users = User.query.all
+    users = User.query.all()
 
     for user in users:
         print(user.email)
