@@ -16,6 +16,7 @@ sched = BlockingScheduler()
 
 @sched.scheduled_job('cron', hour=0, minute=0)
 def scheduled_job():
+    print("Timer called")
     users = User.query.all()
 
     for user in users:
