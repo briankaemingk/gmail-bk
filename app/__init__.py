@@ -258,8 +258,8 @@ def new_order(gmail, id, api):
             subject = header['value']
         elif header['name'] == 'From':
             sender = header['value']
-    trunc_sender = truncate_string(sender, 18)
-    trunc_subject = truncate_string(subject, 20)
+    trunc_sender = truncate_string(sender, 15)
+    trunc_subject = truncate_string(subject, 15)
     m_id = message['payload']['headers'][2]['value']
     link = 'https://mail.google.com/mail/u/0/#search/rfc822msgid%3A' + m_id
     snippet = message['snippet']
