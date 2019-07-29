@@ -278,7 +278,15 @@ def new_order(gmail, id, api):
 def new_fresh_pickup(api):
     fresh_pickup_task = 'Amazon fresh - pick-up + Check [oADDON](todoist://filter?id=2164703089) [[D]](https://bit.ly/2MbZjQO)'
 
-    task = api.items.add(content=fresh_pickup_task, project_id=os.getenv('TODOIST_PERSONAL_P_ID'), labels=[os.getenv('TODOIST_OUT_L_ID')], date_string='today')
+    now = get_now_user_timezone(api)
+    if now.hour < 8 or (now.hour == 8 and now.minute < 45) :
+        api.items.add(content=fresh_pickup_task, project_id=os.getenv('TODOIST_PERSONAL_P_ID'), labels=[os.getenv('TODOIST_OUT_L_ID')], date_string='tod 8:45')
+    elif now.hour > 20 or (now.hour == 20 and now.minute > 45) :
+        api.items.add(content=fresh_pickup_task, project_id=os.getenv('TODOIST_PERSONAL_P_ID'), labels=[os.getenv('TODOIST_OUT_L_ID')], date_string='tom 8:45')
+    else :
+        api.items.add(content=fresh_pickup_task, project_id=os.getenv('TODOIST_PERSONAL_P_ID'),
+                      labels=[os.getenv('TODOIST_OUT_L_ID')], date_string='tod')
+
     api.commit()
 
 def truncate_string(string, length):
