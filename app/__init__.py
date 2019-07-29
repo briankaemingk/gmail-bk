@@ -219,6 +219,9 @@ def webhook_callback():
 
     getAroundLabels = [os.getenv('GETAROUND_LABEL'), 'INBOX']
 
+
+    print('CHANGES: ' + changes)
+
     for change in changes:
         if 'labelsAdded' in change:
             for message in change['labelsAdded']:
