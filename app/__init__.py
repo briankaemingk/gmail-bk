@@ -232,6 +232,9 @@ def webhook_callback():
                 labels = change["messagesAdded"][0]["message"]["labelIds"]
                 intersectionOfTwoArrays = list(set(getAroundLabels) & set(labels))
 
+                #New Fresh pickup
+                if os.getenv('FRESH_PICKUP_LABEL') in labels : new_fresh_pickup(api)
+
                 #New Getaround reservation
                 if set(getAroundLabels) == set(intersectionOfTwoArrays):
                     new_getaround_rental(gmail, change, api)
@@ -269,6 +272,13 @@ def new_order(gmail, id, api):
     task = api.items.add(content=content, project_id=os.getenv('TODOIST_PERSONAL_P_ID'), labels=[os.getenv('TODOIST_WWF_L_ID')])
     api.commit()
     api.notes.add(int(task['id']), '[Link to message]' + '(' + link + '): ' + snippet)
+    api.commit()
+
+
+def new_fresh_pickup(api):
+    fresh_pickup_task = 'Amazon fresh - pick-up + Check [oADDON](todoist://filter?id=2164703089) [[D]](https://bit.ly/2MbZjQO)'
+
+    task = api.items.add(content=fresh_pickup_task, project_id=os.getenv('TODOIST_PERSONAL_P_ID'), labels=[os.getenv('TODOIST_OUT_L_ID')], date_string='today')
     api.commit()
 
 def truncate_string(string, length):
