@@ -308,7 +308,7 @@ def new_getaround_rental(gmail, change, api):
     labels = [os.getenv('TODOIST_T2D_L_ID'), os.getenv('TODOIST_HOME_L_ID')]
     project_id = os.getenv('TODOIST_GETAROUND_P_ID')
     date_string = today + timedelta(minutes=15)
-    rental_date_str = rental_date_obj.strftime('%I:%M')
+    rental_date_str = rental_date_obj.strftime('%H:%M')
 
     # Rental is today
     if today.date() == rental_date_obj.date():
