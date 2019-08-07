@@ -316,7 +316,7 @@ def new_getaround_rental(gmail, change, api):
 
     # Rental is tomorrow before 9am
     if tomorrow.date() == rental_date_obj.date() and rental_date_obj.hour <= 9:
-        content = 'Getaround rental tomorrow at ' + rental_date_str + ' - Clean-out car'
+        content = 'Getaround rental tom at ' + rental_date_str + ' - Clean-out car'
 
     else:
         content = 'Getaround rental at ' + rental_date_str + ' - Clean-out car'
