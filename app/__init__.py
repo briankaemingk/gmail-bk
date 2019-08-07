@@ -341,7 +341,8 @@ def add_task(api, project_id, content, date_str, labels):
     item = api.items.add(content,
                          project_id,
                          date_string=date_str,
-                         labels=labels)
+                         labels=labels,
+                         auto_reminder=1)
     api.commit()
     return item
 
