@@ -320,7 +320,7 @@ def new_getaround_rental(gmail, change, api):
 
     else:
         content = 'Getaround rental at ' + rental_date_str + ' - Clean-out car'
-        date_string = str(rental_date_obj.month) + '-' + str(rental_date_obj.day)
+        date_string = str(rental_date_obj.year) + '-' + str(rental_date_obj.strftime("%m")) + '-' + str(rental_date_obj.strftime("%d"))
 
     item = add_task(api, project_id, content, date_string, labels)
     api.notes.add(item['id'], "[Link to message](" + msg_url + ") -  " + msg_str)
@@ -340,7 +340,7 @@ def new_getaround_rental(gmail, change, api):
 def add_task(api, project_id, content, date_str, labels):
     item = api.items.add(content=content,
                          project_id=project_id,
-                         due='{"string":  "'+ date_str +'"}',
+                         due= {"due" : { "date" : date_str}},
                          labels=labels,
                          auto_reminder=1)
     api.commit()
