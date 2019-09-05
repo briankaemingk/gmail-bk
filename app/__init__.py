@@ -340,7 +340,7 @@ def new_getaround_rental(gmail, change, api):
 def add_task(api, project_id, content, date_str, labels):
     item = api.items.add(content=content,
                          project_id=project_id,
-                         due='"due": {"string":  "+ date_str +"}',
+                         due='"due": {"string":  "'+ date_str +'"}',
                          labels=labels,
                          auto_reminder=1)
     api.commit()
