@@ -352,8 +352,12 @@ def initialize_todoist():
         logging.warn('Please set the API token in environment variable.')
         exit()
     api = TodoistAPI(API_TOKEN)
-    api.sync()
-    return api
+
+    if api is None:
+        return 'Request for Streaks with Todoist not authorized, exiting.'
+    else:
+        api.sync()
+        return api
 
 
 def get_token():
