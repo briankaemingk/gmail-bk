@@ -217,7 +217,7 @@ def webhook_callback():
         print
         'An error occurred: %s' % error
 
-    getAroundLabels = [os.getenv('GETAROUND_LABEL'), 'INBOX']
+    getAroundLabels = [os.getenv('GETAROUND_LABEL')]
 
     for change in changes:
         print('CHANGE: ' + str(change))
