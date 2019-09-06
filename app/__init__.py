@@ -300,6 +300,7 @@ def new_getaround_rental(gmail, change, api):
     msg_id = change["messagesAdded"][0]["message"]["id"]
     msg_url = "https://mail.google.com/mail/u/0/#label/getaround/" + change["messagesAdded"][0]["message"]["id"]
     msg_str = message['snippet']
+    print("Msg str: ", msg_str)
 
     rental_date_obj = parse(subject, fuzzy=True)
     today = get_now_user_timezone(api)
