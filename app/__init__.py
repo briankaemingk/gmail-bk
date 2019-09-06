@@ -307,15 +307,17 @@ def new_getaround_rental(gmail, change, api):
 
     labels = [os.getenv('TODOIST_T2D_L_ID'), os.getenv('TODOIST_HOME_L_ID')]
     project_id = os.getenv('TODOIST_GETAROUND_P_ID')
-    date_string = today + timedelta(minutes=15)
+    date_plus = today + timedelta(minutes=15)
     rental_date_str = rental_date_obj.strftime('%H:%M')
+
+    date_string = convert_datetime_str(date_plus)
 
     # Rental is today
     if today.date() == rental_date_obj.date():
         content = 'Getaround rental today at ' + rental_date_str + ' - Clean-out car'
 
     # Rental is tomorrow before 9am
-    if tomorrow.date() == rental_date_obj.date() and rental_date_obj.hour <= 9:
+    elif tomorrow.date() == rental_date_obj.date() and rental_date_obj.hour <= 9:
         content = 'Getaround rental tom at ' + rental_date_str + ' - Clean-out car'
 
     else:
@@ -335,6 +337,11 @@ def new_getaround_rental(gmail, change, api):
     add_task(api, project_id, content, date_string, labels)
     print('******************Task created: ', content)
     api.commit()
+
+
+def convert_datetime_str(date):
+    """Convert a datetime object into the todoist due date string format"""
+    return date.strftime('%Y-%m-%dT%H:%M:%S')
 
 
 def add_task(api, project_id, content, date_string, labels):
