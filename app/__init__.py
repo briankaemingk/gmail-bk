@@ -300,7 +300,6 @@ def new_getaround_rental(gmail, change, api):
     msg_id = change["messagesAdded"][0]["message"]["id"]
     msg_url = "https://mail.google.com/mail/u/0/#label/getaround/" + change["messagesAdded"][0]["message"]["id"]
     msg_str = message['snippet']
-    print("Msg str: ", msg_str)
 
     rental_date_obj = parse(subject, fuzzy=True)
     today = get_now_user_timezone(api)
@@ -329,8 +328,9 @@ def new_getaround_rental(gmail, change, api):
     api.notes.add(item['id'], "[Link to message](" + msg_url + ") -  " + msg_str)
 
     # Get text between Return and Duration then remove the PST (which is an unrecognized tz)
-    return_date_obj = parse((msg_str.split("Return:")[1]).split("Duration:")[0].rsplit(' ', 2)[0], fuzzy=True)
-    return_date_str = return_date_obj.strftime('%I:%M')
+    if "Return" in msg_str:
+        return_date_obj = parse((msg_str.split("Return:")[1]).split("Duration:")[0].rsplit(' ', 2)[0], fuzzy=True)
+        return_date_str = return_date_obj.strftime('%I:%M')
 
     content = 'Getaround return at ' + return_date_str + ' - Clean-out car'
     date_string = return_date_obj + timedelta(minutes=30)
