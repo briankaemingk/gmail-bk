@@ -331,7 +331,9 @@ def new_getaround_rental(gmail, change, api):
     if "Return" in msg_str:
         return_date_obj = parse((msg_str.split("Return:")[1]).split("Duration:")[0].rsplit(' ', 2)[0], fuzzy=True)
         return_date_str = return_date_obj.strftime('%I:%M')
-    else: return_date_str = '2019-09-05'
+    else:
+        return_date_str = '2019-09-05'
+        return_date_obj = get_now_user_timezone(api)
 
     content = 'Getaround return at ' + return_date_str + ' - Clean-out car'
     date_string = return_date_obj + timedelta(minutes=30)
