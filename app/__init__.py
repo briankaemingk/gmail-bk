@@ -276,7 +276,7 @@ def new_order(gmail, id, api):
 
 
 def new_fresh_pickup(api):
-    fresh_pickup_task = 'Amazon fresh - pick-up + Check [oADDON](todoist://filter?id=2164703089) [[D]](https://bit.ly/2MbZjQO)'
+    fresh_pickup_task = 'Amazon Fresh - pick-up + Check [oADDON](todoist://filter?id=2164703089) [[D]](https://bit.ly/2MbZjQO)'
 
     now = get_now_user_timezone(api)
     if now.hour < 8 or (now.hour == 8 and now.minute < 45) :
@@ -314,14 +314,14 @@ def new_getaround_rental(gmail, change, api):
 
     # Rental is today
     if today.date() == rental_date_obj.date():
-        content = 'Getaround rental today at ' + rental_date_str + ' - Clean-out car'
+        content = 'Getaround rental today at ' + rental_date_str
 
     # Rental is tomorrow before 9am
     elif tomorrow.date() == rental_date_obj.date() and rental_date_obj.hour <= 9:
-        content = 'Getaround rental tom at ' + rental_date_str + ' - Clean-out car'
+        content = 'Getaround rental tom at ' + rental_date_str
 
     else:
-        content = 'Getaround rental at ' + rental_date_str + ' - Clean-out car'
+        content = 'Getaround rental at ' + rental_date_str
         date_string = str(rental_date_obj.year) + '-' + str(rental_date_obj.strftime("%m")) + '-' + str(rental_date_obj.strftime("%d"))
 
     item = add_task(api, project_id, content, date_string, labels)
@@ -335,7 +335,7 @@ def new_getaround_rental(gmail, change, api):
         return_date_str = '2019-09-05'
         return_date_obj = get_now_user_timezone(api)
 
-    content = 'Getaround return at ' + return_date_str + ' - Clean-out car'
+    content = 'Getaround return at ' + return_date_str + ' - Check car'
     date_string = return_date_obj + timedelta(minutes=30)
     labels = [os.getenv('TODOIST_HOME_L_ID')]
     add_task(api, project_id, content, date_string, labels)
