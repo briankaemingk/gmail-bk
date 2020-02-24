@@ -235,6 +235,9 @@ def webhook_callback():
                 #New Fresh pickup
                 if os.getenv('FRESH_PICKUP_LABEL') in labels : new_fresh_pickup(api)
 
+                #ADD HERE
+                if os.getenv('ORDERS_LABEL') in labels : print('------ORDERS label')
+
                 #New Getaround reservation
                 if set(getAroundLabels) == set(intersectionOfTwoArrays):
                     new_getaround_rental(gmail, change, api)
